@@ -9,6 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
+# 导入所有模型以确保表被创建
+# 这会触发 models/__init__.py 的自动导入
+import app.models  # type: ignore # noqa: F401
 from app.initializer._db import Base  # type: ignore
 
 # 导入所有模型以确保表被创建

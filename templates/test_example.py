@@ -9,7 +9,6 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession
 
-
 # ==================== 健康检查测试 ====================
 
 
@@ -178,9 +177,7 @@ async def test_database_operation(test_db_session: AsyncSession) -> None:
     assert user_id is not None
 
     # 查询数据
-    user = await db_async_util.fetch_one(
-        session=test_db_session, model=User, filter_by={"id": user_id}
-    )
+    user = await db_async_util.fetch_one(session=test_db_session, model=User, filter_by={"id": user_id})
 
     assert user is not None
     assert user.name == "test"
@@ -195,9 +192,7 @@ async def test_database_operation(test_db_session: AsyncSession) -> None:
     assert updated > 0
 
     # 验证更新
-    user = await db_async_util.fetch_one(
-        session=test_db_session, model=User, filter_by={"id": user_id}
-    )
+    user = await db_async_util.fetch_one(session=test_db_session, model=User, filter_by={"id": user_id})
     assert user is not None
     assert user.name == "updated_test"
 
@@ -210,7 +205,5 @@ async def test_database_operation(test_db_session: AsyncSession) -> None:
     assert deleted > 0
 
     # 验证删除
-    user = await db_async_util.fetch_one(
-        session=test_db_session, model=User, filter_by={"id": user_id}
-    )
+    user = await db_async_util.fetch_one(session=test_db_session, model=User, filter_by={"id": user_id})
     assert user is None

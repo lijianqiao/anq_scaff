@@ -3,18 +3,15 @@
 提供全局异常处理器，实现分层异常处理
 """
 
-from typing import Any
-
-from fastapi import Request
-from fastapi.exceptions import RequestValidationError
-from fastapi.responses import JSONResponse
-from loguru import logger
-
 # type: ignore 用于模板文件
 from app.api.exceptions import BaseAppError  # type: ignore
 from app.api.responses import Responses  # type: ignore
 from app.api.status import Status  # type: ignore
 from app.initializer.context import request_id_var  # type: ignore
+from fastapi import Request
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import JSONResponse
+from loguru import logger
 
 
 async def exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -37,10 +34,7 @@ async def exception_handler(request: Request, exc: Exception) -> JSONResponse:
 
     # 处理业务异常（BaseAppError）
     if isinstance(exc, BaseAppError):
-        logger.warning(
-            f"[{request_id}] 业务异常: {type(exc).__name__}: "
-            f"code={exc.status.code}, msg={exc.msg}"
-        )
+        logger.warning(f"[{request_id}] 业务异常: {type(exc).__name__}: code={exc.status.value}, msg={exc.msg}")
         return JSONResponse(
             status_code=200,  # 业务异常返回200，错误码在响应体中
             content=Responses.failure(

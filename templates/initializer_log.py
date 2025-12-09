@@ -113,7 +113,7 @@ def init_logger(
             rotation="100 MB",
             retention="30 days",
             compression="zip",
-            filter=lambda record: _context_filter(record) and record["level"].no <= 20,
+            filter=lambda record: _context_filter(record) and record["level"].no <= 20,  # type: ignore[arg-type]
             serialize=serialize,
         )
 
