@@ -20,7 +20,7 @@ class ${ModuleName}Service:
     def __init__(self) -> None:
         self.crud = LoggingFastCRUD(${ModuleName})
         self.cache = getattr(g, "cache_manager", None)
-        self.cache_prefix = f"${module_name}:"
+        self.cache_prefix = "${module_name}:"
 
     def _cache_key(self, suffix: str) -> str:
         return f"{self.cache_prefix}{suffix}"

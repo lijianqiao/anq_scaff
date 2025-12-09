@@ -4,15 +4,15 @@
 """
 
 # type: ignore 用于模板文件
-from fastapi import Request
+from fastapi import HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
 
-from app.api.exceptions import BaseAppError  # type: ignore
-from app.api.responses import Responses  # type: ignore
-from app.api.status import Status  # type: ignore
-from app.initializer.context import request_id_var  # type: ignore
+from app.api.exceptions import BaseAppError
+from app.api.responses import Responses
+from app.api.status import Status
+from app.initializer.context import request_id_var
 
 
 async def exception_handler(request: Request, exc: Exception) -> JSONResponse:
@@ -43,6 +43,14 @@ async def exception_handler(request: Request, exc: Exception) -> JSONResponse:
                 msg=exc.msg,
                 data=exc.data,
             ),
+        )
+
+    # 处理 HTTPException（保持原始状态码）
+    if isinstance(exc, HTTPException):
+        logger.warning(f"[{request_id}] HTTP异常: {type(exc).__name__}: status={exc.status_code}, detail={exc.detail}")
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=Responses.failure(status=Status.AUTH_ERROR, msg=str(exc.detail)),
         )
 
     # 处理未知异常

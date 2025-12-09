@@ -6,11 +6,12 @@
 import re
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import status as http_status
 from loguru import logger
 from pydantic import BaseModel
 
-from app.api.dependencies import JWTUser, get_current_user, get_current_user_required
+from app.api.dependencies import JWTUser, get_current_user_required
 from app.api.exceptions import BaseAppError
 from app.api.responses import Responses
 from app.api.status import Status
@@ -31,7 +32,7 @@ router = APIRouter()
 # 从配置加载，留空则统一路由不可用
 ALLOWED_RESOURCES: set[str] = set(settings.api_allowed_resources)
 ALLOW_ALL: bool = settings.unified_route_allow_all
-REQUIRE_AUTH: bool = settings.unified_route_require_auth
+REQUIRE_AUTH: bool = True  # 始终强制认证
 
 # 允许的动作白名单
 ALLOWED_ACTIONS: set[str] = {"list", "get", "create", "update", "delete"}
@@ -65,7 +66,7 @@ def _validate_resource(resource: str) -> bool:
 async def unified_action(
     resource: str,
     request: ActionRequest = Body(...),
-    current_user: JWTUser | None = Depends(get_current_user_required if REQUIRE_AUTH else get_current_user),
+    current_user: JWTUser | None = Depends(get_current_user_required),
 ) -> dict[str, Any]:
     """
     统一动作接口 - POST /<资源>/actions
@@ -74,7 +75,13 @@ async def unified_action(
     - action: 动作名称（list, get, create, update, delete）
     - params: 动作参数
     """
-    _ = current_user  # 用于权限检查
+    if current_user is None:
+        # 双重保护，确保未认证时直接返回 401
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="未授权访问",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
     if not ALLOW_ALL and not ALLOWED_RESOURCES:
         logger.warning("统一路由未配置允许的资源，已拒绝请求")

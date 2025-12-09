@@ -5,14 +5,14 @@ API接口 - ${ModuleName}
 
 from typing import Any
 
-from fastapi import APIRouter, Body, Depends
+from fastapi import APIRouter, Body, Depends, HTTPException
+from fastapi import status as http_status
 
-# type: ignore 用于模板文件
-from app.api.dependencies import JWTUser, get_current_user  # type: ignore
-from app.api.responses import Responses  # type: ignore
-from app.api.status import Status  # type: ignore
-from app.schemas.${module_name} import ${ModuleName}Create, ${ModuleName}Update  # type: ignore
-from app.services.${module_name} import ${ModuleName}Service  # type: ignore
+from app.api.dependencies import JWTUser, get_current_user_required
+from app.api.responses import Responses
+from app.api.status import Status
+from app.schemas.${module_name} import ${ModuleName}Create, ${ModuleName}Update
+from app.services.${module_name} import ${ModuleName}Service
 
 router = APIRouter()
 _active = True
@@ -22,13 +22,18 @@ _tag = "${module_name}"
 @router.post("/${module_name}/actions")
 async def unified_action(
     request: dict[str, Any] = Body(...),
-    current_user: JWTUser | None = Depends(get_current_user),
+    current_user: JWTUser | None = Depends(get_current_user_required),
 ) -> dict[str, Any]:
     """
     统一动作接口
     action: list, get, create, update, delete
     """
-    _ = current_user  # 可用于权限检查
+    if current_user is None:
+        raise HTTPException(
+            status_code=http_status.HTTP_401_UNAUTHORIZED,
+            detail="未授权访问",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     action = request.get("action")
     params = request.get("params", {})
 
