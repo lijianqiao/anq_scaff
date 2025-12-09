@@ -182,12 +182,13 @@ class TemplateEngine:
         """渲染模板"""
         template = self.templates.get(template_name)
         if not template:
-            # 如果模板不存在，使用内联模板
+            # 如果模板不存在，使用内联模板（兜底）
             inline_templates = self._get_inline_templates()
             template = inline_templates.get(template_name, "")
 
         if not template:
-            return f"# Template {template_name} not found\n"
+            # 直接抛错，避免静默生成损坏的项目
+            raise ValueError(f"模板 '{template_name}' 不存在")
 
         # 简单的字符串替换
         return string.Template(template).safe_substitute(**context)

@@ -3,13 +3,13 @@ JWT 工具模块
 从配置读取密钥和算法，遵循配置与代码分离原则
 """
 
-from datetime import datetime, timedelta, timezone
+# 导入引发的报错在创建项目之后会自动消失
+from datetime import UTC, datetime, timedelta
 
 import jwt
 from loguru import logger
 
-# type: ignore 用于模板文件
-from app.initializer._settings import settings  # type: ignore
+from app.initializer._settings import settings
 
 
 def create_access_token(
@@ -29,11 +29,9 @@ def create_access_token(
     to_encode = data.copy()
 
     if expires_delta:
-        expire = datetime.now(timezone.utc) + expires_delta
+        expire = datetime.now(UTC) + expires_delta
     else:
-        expire = datetime.now(timezone.utc) + timedelta(
-            minutes=settings.jwt_expire_minutes
-        )
+        expire = datetime.now(UTC) + timedelta(minutes=settings.jwt_expire_minutes)
 
     to_encode.update({"exp": expire})
 

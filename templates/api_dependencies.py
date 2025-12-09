@@ -3,11 +3,13 @@ API 依赖注入
 提供 JWT 认证和 API Key 验证的依赖函数
 """
 
+# 导入引发的报错在创建项目之后会自动消失
 from fastapi import Depends, Header, HTTPException, status
 from pydantic import BaseModel, ConfigDict
 
-from app.utils.api_key_util import is_valid_api_key  # type: ignore
-from app.utils.jwt_util import verify_token  # type: ignore
+from app.initializer.context import tenant_id_var, user_id_var
+from app.utils.api_key_util import is_valid_api_key
+from app.utils.jwt_util import verify_token
 
 
 class JWTUser(BaseModel):
@@ -61,11 +63,22 @@ async def get_current_user(token: str | None = Depends(get_token)) -> JWTUser | 
     username = payload.get("username")
     roles = payload.get("roles")
 
-    return JWTUser(
+    user = JWTUser(
         user_id=str(user_id) if user_id else "",
         username=str(username) if username else None,
         roles=list(roles) if isinstance(roles, list) else [],
     )
+
+    # 注入上下文，便于日志链路追踪
+    try:
+        _ = user_id_var.set(user.user_id or None)
+        tenant = payload.get("tenant_id") if isinstance(payload, dict) else None
+        if tenant:
+            _ = tenant_id_var.set(str(tenant))
+    except Exception:
+        pass
+
+    return user
 
 
 async def get_current_user_required(

@@ -5,21 +5,21 @@ Pytest 配置文件
 
 from collections.abc import AsyncGenerator, Generator
 
-import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
+# 导入引发的报错在创建项目之后会自动消失
 # 导入所有模型以确保表被创建
 # 这会触发 models/__init__.py 的自动导入
-import app.models  # type: ignore # noqa: F401
-from app.initializer._db import Base  # type: ignore
+import app.models  # noqa: F401
+import pytest
+from app.initializer._db import Base
+from fastapi.testclient import TestClient
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 # 测试数据库URL（内存数据库）
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
 
 @pytest.fixture(scope="function")
-async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
+async def test_db_session() -> AsyncGenerator[AsyncSession]:
     """测试数据库会话"""
     # 创建测试数据库引擎
     engine = create_async_engine(TEST_DB_URL, echo=False)
@@ -45,7 +45,7 @@ async def test_db_session() -> AsyncGenerator[AsyncSession, None]:
 
 
 @pytest.fixture(scope="function")
-def test_client() -> Generator[TestClient, None, None]:
+def test_client() -> Generator[TestClient]:
     """测试客户端"""
     # 确保导入的是 FastAPI 应用实例而不是模块
     from app.main import app as fastapi_app

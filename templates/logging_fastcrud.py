@@ -3,6 +3,7 @@
 自动处理日志、缓存失效和数据库错误翻译
 """
 
+# 导入引发的报错在创建项目之后会自动消失
 from typing import Any
 
 from loguru import logger
@@ -10,9 +11,9 @@ from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.exceptions import DatabaseError, ErrorCode  # type: ignore
-from app.initializer import g  # type: ignore
-from app.initializer.context import request_id_var, user_id_var  # type: ignore
+from app.api.exceptions import DatabaseError, ErrorCode
+from app.initializer import g
+from app.initializer.context import request_id_var, user_id_var
 
 
 class LoggingFastCRUD:
@@ -35,17 +36,11 @@ class LoggingFastCRUD:
         user_id = user_id_var.get() or "anonymous"
 
         try:
-            logger.info(
-                f"[{request_id}] [{user_id}] {self.model_name}.{operation} "
-                f"args={args} kwargs={kwargs}"
-            )
+            logger.info(f"[{request_id}] [{user_id}] {self.model_name}.{operation} args={args} kwargs={kwargs}")
 
             result = await func_call(*args, **kwargs)
 
-            logger.info(
-                f"[{request_id}] [{user_id}] {self.model_name}.{operation} "
-                f"success: {result}"
-            )
+            logger.info(f"[{request_id}] [{user_id}] {self.model_name}.{operation} success: {result}")
 
             # 缓存失效
             await self._invalidate_cache(operation)
@@ -53,30 +48,23 @@ class LoggingFastCRUD:
             return result
 
         except SQLAlchemyError as e:
-            logger.error(
-                f"[{request_id}] [{user_id}] {self.model_name}.{operation} "
-                f"database error: {e}"
-            )
+            logger.error(f"[{request_id}] [{user_id}] {self.model_name}.{operation} database error: {e}")
             raise DatabaseError(
                 error_code=ErrorCode.DATABASE_ERROR,
                 message=f"数据库操作失败: {e!s}",
                 cause=e,
             ) from e
         except Exception as e:
-            logger.exception(
-                f"[{request_id}] [{user_id}] {self.model_name}.{operation} "
-                f"unexpected error: {e}"
-            )
+            logger.exception(f"[{request_id}] [{user_id}] {self.model_name}.{operation} unexpected error: {e}")
             raise
 
     async def _invalidate_cache(self, operation: str) -> None:
         """缓存失效"""
         cache_manager = getattr(g, "cache_manager", None)
         if cache_manager:
-            # 清除相关缓存
-            cache_key_pattern = f"{self.model_name.lower()}:*"
-            # 这里需要根据实际缓存实现来清除
-            logger.debug(f"Invalidating cache for {cache_key_pattern} ({operation})")
+            cache_prefix = f"{self.model_name.lower()}:"
+            deleted = cache_manager.delete_prefix(cache_prefix)
+            logger.debug(f"Invalidating cache for prefix {cache_prefix} ({operation}), deleted={deleted}")
 
     async def get(
         self,
@@ -94,11 +82,7 @@ class LoggingFastCRUD:
                 return None
 
             if fields:
-                return {
-                    field: getattr(obj, field)
-                    for field in fields
-                    if hasattr(obj, field)
-                }
+                return {field: getattr(obj, field) for field in fields if hasattr(obj, field)}
             return {c.name: getattr(obj, c.name) for c in self.model.__table__.columns}
 
         return await self._execute_with_logging("get", session, _get)
@@ -127,9 +111,7 @@ class LoggingFastCRUD:
             if filter_by:
                 for key, value in filter_by.items():
                     if hasattr(self.model, key):
-                        count_stmt = count_stmt.where(
-                            getattr(self.model, key) == value
-                        )
+                        count_stmt = count_stmt.where(getattr(self.model, key) == value)
 
             total_result = await session.execute(count_stmt)
             total = total_result.scalar() or 0
@@ -141,20 +123,10 @@ class LoggingFastCRUD:
             objs = result.scalars().all()
 
             if fields:
-                items = [
-                    {
-                        field: getattr(obj, field)
-                        for field in fields
-                        if hasattr(obj, field)
-                    }
-                    for obj in objs
-                ]
+                items = [{field: getattr(obj, field) for field in fields if hasattr(obj, field)} for obj in objs]
             else:
                 # 对每个对象生成一个包含所有字段的字典
-                items = [
-                    {c.name: getattr(obj, c.name) for c in self.model.__table__.columns}
-                    for obj in objs
-                ]
+                items = [{c.name: getattr(obj, c.name) for c in self.model.__table__.columns} for obj in objs]
 
             return items, total
 

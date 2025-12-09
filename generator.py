@@ -134,6 +134,9 @@ class ProjectGenerator:
         self.project_path = output_dir / project_name
         self.template_engine = TemplateEngine()
 
+        if self.db_type not in SUPPORTED_DB_TYPES:
+            raise ValueError(f"不支持的数据库类型: {self.db_type}，可选值: {', '.join(sorted(SUPPORTED_DB_TYPES))}")
+
     def _build_directory_list(self) -> list[str]:
         """
         根据配置构建目录列表

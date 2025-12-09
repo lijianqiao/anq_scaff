@@ -46,9 +46,14 @@ JWT_EXPIRE_MINUTES=1440
 
 # ===== API Key 配置 =====
 # 多个 API Key 用逗号分隔
-API_KEYS=
+API_KEYS=demo_api_key
 API_KEY_PREFIX=anq_
 API_KEY_LENGTH=32
+
+# ===== 统一路由安全配置 =====
+API_ALLOWED_RESOURCES=user
+UNIFIED_ROUTE_ALLOW_ALL=false
+UNIFIED_ROUTE_REQUIRE_AUTH=true
 
 # ===== 雪花ID配置 =====
 SNOW_DATACENTER_ID=1

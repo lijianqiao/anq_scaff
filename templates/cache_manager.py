@@ -117,7 +117,11 @@ class CacheManager:
         return key in self._memory_cache
 
     def clear(self) -> bool:
-        """清除所有缓存"""
+        """清除所有缓存
+
+        Returns:
+            是否清除成功
+        """
         if self._use_redis and self.redis_client is not None:
             try:
                 with self.redis_client.connection() as r:
@@ -128,3 +132,33 @@ class CacheManager:
 
         self._memory_cache.clear()
         return True
+
+    def delete_prefix(self, prefix: str) -> int:
+        """按前缀批量删除缓存键
+        Args:
+            prefix: 键前缀
+            Returns:
+                删除的键数量
+        """
+        deleted = 0
+        if self._use_redis and self.redis_client is not None:
+            try:
+                with self.redis_client.connection() as r:
+                    cursor = 0
+                    pattern = f"{prefix}*"
+                    while True:
+                        cursor, keys = r.scan(cursor=cursor, match=pattern, count=100)
+                        if keys:
+                            deleted += r.delete(*keys)
+                        if cursor == 0:
+                            break
+            except Exception as e:
+                logger.warning(f"Redis按前缀删除失败: {e}")
+
+        # 内存缓存处理
+        to_delete = [k for k in self._memory_cache if k.startswith(prefix)]
+        for key in to_delete:
+            del self._memory_cache[key]
+            deleted += 1
+
+        return deleted

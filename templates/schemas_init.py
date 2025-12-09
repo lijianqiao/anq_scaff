@@ -4,7 +4,7 @@
 所有Schema类都应继承自 BaseModel
 """
 
-from typing import Generic, List, TypeVar
+from typing import TypeVar
 
 from pydantic import BaseModel, ConfigDict
 
@@ -28,10 +28,10 @@ class PageRequest(BaseModel):
     size: int = 10
 
 
-class PageResponse(BaseModel, Generic[DataT]):
+class PageResponse[DataT](BaseModel):
     """分页响应"""
 
-    items: List[DataT]
+    items: list[DataT]
     total: int
     page: int
     size: int
@@ -40,7 +40,7 @@ class PageResponse(BaseModel, Generic[DataT]):
     @classmethod
     def create(
         cls,
-        items: List[DataT],
+        items: list[DataT],
         total: int,
         page: int,
         size: int,

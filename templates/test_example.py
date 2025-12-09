@@ -37,8 +37,7 @@ def test_auth_without_token(test_client: TestClient) -> None:
         "/api/v1/user/actions",
         json={"action": "list", "params": {"page": 1, "size": 10}},
     )
-    # 可选认证允许无 Token 访问
-    assert response.status_code == 200
+    assert response.status_code in (401, 403)
 
 
 def test_auth_with_invalid_token(test_client: TestClient) -> None:
@@ -48,8 +47,7 @@ def test_auth_with_invalid_token(test_client: TestClient) -> None:
         json={"action": "list", "params": {}},
         headers={"Authorization": "Bearer invalid_token"},
     )
-    # 无效 Token 在可选认证下也允许（get_current_user 返回 None）
-    assert response.status_code == 200
+    assert response.status_code in (401, 403)
 
 
 def test_auth_with_valid_token(

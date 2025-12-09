@@ -33,9 +33,7 @@ class Settings(BaseSettings):
 
     # ===== 数据库配置 =====
     db_url: str = Field(default="sqlite:///app.db", description="数据库URL（同步）")
-    db_async_url: str = Field(
-        default="sqlite+aiosqlite:///app.db", description="数据库URL（异步）"
-    )
+    db_async_url: str = Field(default="sqlite+aiosqlite:///app.db", description="数据库URL（异步）")
     db_echo: bool = Field(default=False, description="SQL日志")
     db_pool_size: int = Field(default=10, description="连接池大小")
     db_max_overflow: int = Field(default=5, description="最大溢出连接数")
@@ -70,9 +68,14 @@ class Settings(BaseSettings):
     jwt_expire_minutes: int = Field(default=1440, description="JWT过期时间（分钟）")
 
     # ===== API Key 配置 =====
-    api_keys: list[str] = Field(default=[], description="有效的API密钥列表")
+    api_keys: list[str] = Field(default=["demo_api_key"], description="有效的API密钥列表")
     api_key_prefix: str = Field(default="anq_", description="API Key前缀")
     api_key_length: int = Field(default=32, description="API Key长度")
+
+    # ===== 统一路由安全配置 =====
+    api_allowed_resources: list[str] = Field(default=["user"], description="统一路由允许的资源白名单")
+    unified_route_allow_all: bool = Field(default=False, description="统一路由是否允许所有资源")
+    unified_route_require_auth: bool = Field(default=True, description="统一路由是否强制认证")
 
     # ===== 雪花ID配置 =====
     snow_datacenter_id: int = Field(default=1, description="数据中心ID (1-31)")

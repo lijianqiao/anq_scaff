@@ -10,6 +10,13 @@ from .template_engine import TemplateEngine
 # 常量定义
 DEFAULT_ENCODING = "utf-8"
 
+
+def _snake_to_pascal(name: str) -> str:
+    """将蛇形命名转换为帕斯卡命名。"""
+    parts = [p for p in name.replace("-", "_").split("_") if p]
+    return "".join(part.capitalize() for part in parts) or name.capitalize()
+
+
 # 配置日志记录器
 logger = logging.getLogger(__name__)
 
@@ -95,7 +102,7 @@ class ModuleGenerator:
         """
         return {
             "module_name": self.module_name,
-            "ModuleName": self.module_name.capitalize(),
+            "ModuleName": _snake_to_pascal(self.module_name),
         }
 
     def _generate_api_file(self, api_dir: Path) -> None:
