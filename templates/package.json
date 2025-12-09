@@ -1,0 +1,17 @@
+{
+  "name": "anq-scaff-code-generator",
+  "version": "1.0.0",
+  "description": "ANQ Scaff 代码生成器",
+  "main": "generate_code.js",
+  "scripts": {
+    "generate": "node generate_code.js"
+  },
+  "keywords": [
+    "fastapi",
+    "code-generator",
+    "scaffold"
+  ],
+  "author": "",
+  "license": "MIT"
+}
+

@@ -1,0 +1,23 @@
+"""
+FastAPI 应用入口
+"""
+
+from fastapi import FastAPI
+
+from app.api import api_router
+from app.core.lifespan import lifespan
+from app.middleware import setup_middleware
+
+# 创建 FastAPI 应用实例
+app = FastAPI(
+    title="$project_name",
+    description="企业级 FastAPI 应用",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+# 设置中间件
+setup_middleware(app)
+
+# 注册路由
+app.include_router(api_router, prefix="/api")
