@@ -4,14 +4,15 @@
 """
 
 # type: ignore 用于模板文件
-from app.api.exceptions import BaseAppError  # type: ignore
-from app.api.responses import Responses  # type: ignore
-from app.api.status import Status  # type: ignore
-from app.initializer.context import request_id_var  # type: ignore
 from fastapi import Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from loguru import logger
+
+from app.api.exceptions import BaseAppError  # type: ignore
+from app.api.responses import Responses  # type: ignore
+from app.api.status import Status  # type: ignore
+from app.initializer.context import request_id_var  # type: ignore
 
 
 async def exception_handler(request: Request, exc: Exception) -> JSONResponse:

@@ -14,10 +14,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 import app.models  # type: ignore # noqa: F401
 from app.initializer._db import Base  # type: ignore
 
-# 导入所有模型以确保表被创建
-# 这会触发 models/__init__.py 的自动导入
-import app.models  # type: ignore # noqa: F401
-
 # 测试数据库URL（内存数据库）
 TEST_DB_URL = "sqlite+aiosqlite:///:memory:"
 
