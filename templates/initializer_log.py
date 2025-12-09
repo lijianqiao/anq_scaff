@@ -1,12 +1,47 @@
 """
 日志初始化
 支持多级别日志分离：info.log, error.log, api_traffic.log
+支持上下文感知：自动注入 request_id 和 user_id
 """
 
 import sys
 from pathlib import Path
+from typing import Any
 
 from loguru import logger
+
+# 尝试导入上下文变量（可能还未初始化）
+try:
+    from app.initializer.context import request_id_var, user_id_var  # type: ignore
+except ImportError:
+    request_id_var = None
+    user_id_var = None
+
+
+def _context_filter(record: dict[str, Any]) -> bool:
+    """
+    上下文过滤器
+    为日志记录添加 request_id 和 user_id
+
+    Args:
+        record: 日志记录
+
+    Returns:
+        始终返回 True（不过滤任何记录）
+    """
+    # 注入 request_id
+    if request_id_var is not None:
+        record["extra"]["request_id"] = request_id_var.get("-")
+    else:
+        record["extra"]["request_id"] = "-"
+
+    # 注入 user_id
+    if user_id_var is not None:
+        record["extra"]["user_id"] = user_id_var.get("-")
+    else:
+        record["extra"]["user_id"] = "-"
+
+    return True
 
 
 def init_logger(
@@ -35,17 +70,19 @@ def init_logger(
     # 移除默认处理器
     logger.remove()
 
-    # 控制台输出格式
+    # 控制台输出格式（包含上下文）
     console_format = (
         "<green>{time:YYYY-MM-DD HH:mm:ss}</green> | "
         "<level>{level: <8}</level> | "
+        "<cyan>[{extra[request_id]}]</cyan> | "
         "<cyan>{name}</cyan>:<cyan>{function}</cyan>:<cyan>{line}</cyan> | "
         "<level>{message}</level>"
     )
 
-    # 文件输出格式
+    # 文件输出格式（包含上下文）
     file_format = (
         "{time:YYYY-MM-DD HH:mm:ss} | {level: <8} | "
+        "[{extra[request_id]}] [{extra[user_id]}] | "
         "{name}:{function}:{line} | {message}"
     )
 
@@ -64,6 +101,7 @@ def init_logger(
             level=level,
             colorize=True,
             serialize=serialize,
+            filter=_context_filter,  # type: ignore[arg-type]
         )
 
     if enable_file:
@@ -75,7 +113,7 @@ def init_logger(
             rotation="100 MB",
             retention="30 days",
             compression="zip",
-            filter=lambda record: record["level"].no <= 20,  # INFO = 20
+            filter=lambda record: _context_filter(record) and record["level"].no <= 20,
             serialize=serialize,
         )
 
@@ -87,6 +125,7 @@ def init_logger(
             rotation="100 MB",
             retention="90 days",
             compression="zip",
+            filter=_context_filter,  # type: ignore[arg-type]
             serialize=serialize,
         )
 

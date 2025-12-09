@@ -3,10 +3,16 @@ FastAPI 应用入口
 """
 
 from fastapi import FastAPI
+from fastapi.exceptions import RequestValidationError
 
 from app.api import api_router
+from app.api.exceptions import BaseAppError  # type: ignore
 from app.core.lifespan import lifespan
 from app.middleware import setup_middleware
+from app.middleware.exceptions import (  # type: ignore
+    exception_handler,
+    validation_exception_handler,
+)
 
 # 创建 FastAPI 应用实例
 app = FastAPI(
@@ -15,6 +21,11 @@ app = FastAPI(
     version="1.0.0",
     lifespan=lifespan,
 )
+
+# 注册全局异常处理器
+app.add_exception_handler(BaseAppError, exception_handler)  # type: ignore[arg-type]
+app.add_exception_handler(RequestValidationError, validation_exception_handler)  # type: ignore[arg-type]
+app.add_exception_handler(Exception, exception_handler)  # type: ignore[arg-type]
 
 # 设置中间件
 setup_middleware(app)

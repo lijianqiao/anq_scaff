@@ -29,6 +29,9 @@ def _register_routers() -> None:
         if version_dir.is_dir() and version_dir.name.startswith("v"):
             _register_from_directory(version_dir, prefix=f"/{version_dir.name}")
 
+    # 注册统一动作路由（可选）
+    _register_unified_router()
+
 
 def _register_from_directory(directory: Path, prefix: str) -> None:
     """
@@ -66,6 +69,28 @@ def _register_from_directory(directory: Path, prefix: str) -> None:
 
         except Exception as e:
             logger.error(f"注册路由失败: {module_path}, 错误: {e}")
+
+
+def _register_unified_router() -> None:
+    """
+    注册统一动作路由
+
+    提供 POST /{resource}/actions 的通用入口
+    """
+    try:
+        from app.api.unified_router import router as unified_router  # type: ignore
+
+        # 注册到 /v1 版本下
+        api_router.include_router(
+            unified_router,
+            prefix="/v1",
+            tags=["unified"],
+        )
+        logger.debug("注册统一动作路由: /v1/{resource}/actions")
+    except ImportError:
+        logger.debug("统一动作路由未找到，跳过注册")
+    except Exception as e:
+        logger.warning(f"注册统一动作路由失败: {e}")
 
 
 # 自动注册路由
