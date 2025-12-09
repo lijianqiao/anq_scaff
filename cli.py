@@ -8,7 +8,7 @@ import re
 import sys
 from pathlib import Path
 
-from anq_scaff.generator import ProjectGenerator
+from .generator import ProjectGenerator
 
 # Windows 保留名（不区分大小写）
 # 参考: https://docs.microsoft.com/en-us/windows/win32/fileio/naming-a-file
@@ -159,7 +159,7 @@ def main():
             print("  python runserver.py")
 
         elif args.command == "add":
-            from anq_scaff.module_generator import ModuleGenerator
+            from .module_generator import ModuleGenerator
 
             # 验证模块名称和版本
             module_name = validate_name(args.module_name, "模块")

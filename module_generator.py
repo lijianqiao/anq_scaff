@@ -4,9 +4,8 @@
 
 import logging
 from pathlib import Path
-from typing import Dict
 
-from anq_scaff.template_engine import TemplateEngine
+from .template_engine import TemplateEngine
 
 # 常量定义
 DEFAULT_ENCODING = "utf-8"
@@ -87,7 +86,7 @@ class ModuleGenerator:
             logger.error(f"API模块生成失败: {e}", exc_info=True)
             raise
 
-    def _get_context(self) -> Dict[str, str]:
+    def _get_context(self) -> dict[str, str]:
         """
         获取模板上下文
 

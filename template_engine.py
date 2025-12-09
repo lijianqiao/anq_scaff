@@ -5,7 +5,7 @@
 import logging
 import string
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 # 常量定义
 DEFAULT_DB_TYPE = "sqlite"
@@ -22,7 +22,7 @@ class ConfigBuilder:
     用于构建不同环境的配置文件内容。
     """
 
-    def __init__(self, env: str, context: Dict[str, Any]) -> None:
+    def __init__(self, env: str, context: dict[str, Any]) -> None:
         """
         初始化配置构建器
 
@@ -36,7 +36,7 @@ class ConfigBuilder:
         self.enable_redis = context.get("enable_redis", False)
         self.project_name = context.get("project_name", "")
 
-    def _get_db_config(self) -> Dict[str, str]:
+    def _get_db_config(self) -> dict[str, str]:
         """
         获取数据库配置
 
@@ -137,7 +137,7 @@ class TemplateEngine:
 
     def __init__(self) -> None:
         self.templates_dir = Path(__file__).parent / "templates"
-        self.templates: Dict[str, str] = {}
+        self.templates: dict[str, str] = {}
         self._load_templates()
 
     def _load_templates(self) -> None:
@@ -178,7 +178,7 @@ class TemplateEngine:
 
             logger.debug(f"加载模板文件完成: {py_count} 个Python文件, {other_count} 个其他文件")
 
-    def render(self, template_name: str, context: Dict[str, Any]) -> str:
+    def render(self, template_name: str, context: dict[str, Any]) -> str:
         """渲染模板"""
         template = self.templates.get(template_name)
         if not template:
@@ -192,7 +192,7 @@ class TemplateEngine:
         # 简单的字符串替换
         return string.Template(template).safe_substitute(**context)
 
-    def render_config(self, env: str, context: Dict[str, Any]) -> str:
+    def render_config(self, env: str, context: dict[str, Any]) -> str:
         """
         渲染配置文件
 
@@ -206,7 +206,7 @@ class TemplateEngine:
         config_builder = ConfigBuilder(env, context)
         return config_builder.build()
 
-    def _get_inline_templates(self) -> Dict[str, str]:
+    def _get_inline_templates(self) -> dict[str, str]:
         """获取内联模板（当模板文件不存在时使用）"""
         # 尝试从当前项目的admin-fastapi目录读取模板
         # 尝试从当前项目的admin-fastapi目录读取模板
@@ -218,7 +218,7 @@ class TemplateEngine:
 
         return {}
 
-    def _load_from_existing_project(self, project_dir: Path) -> Dict[str, str]:
+    def _load_from_existing_project(self, project_dir: Path) -> dict[str, str]:
         """从现有项目加载模板"""
         templates = {}
 

@@ -10,7 +10,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
-from anq_scaff.template_engine import TemplateEngine
+from .template_engine import TemplateEngine
 
 # 配置日志记录器
 logger = logging.getLogger(__name__)
