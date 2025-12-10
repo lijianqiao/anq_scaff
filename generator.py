@@ -23,8 +23,8 @@ SUPPORTED_DB_TYPES = {"sqlite", "mysql", "postgresql"}
 # 数据库依赖映射
 DB_DEPENDENCIES: dict[str, list[str]] = {
     "sqlite": ["aiosqlite==0.21.0"],
-    "mysql": ["aiomysql==0.2.0", "pymysql==1.1.0"],
-    "postgresql": ["asyncpg==0.29.0", "psycopg2-binary==2.9.9"],
+    "mysql": ["aiomysql==0.3.2", "pymysql==1.1.2"],
+    "postgresql": ["asyncpg==0.31.0", "psycopg2-binary==2.9.11"],
 }
 
 REDIS_DEPENDENCY = "redis==7.1.0"
