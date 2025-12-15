@@ -8,13 +8,12 @@ from fastapi.exceptions import HTTPException, RequestValidationError
 from app.api import api_router
 from app.api.exceptions import BaseAppError
 from app.core.lifespan import lifespan
+from app.initializer._settings import settings
 from app.middleware import setup_middleware
 from app.middleware.exceptions import (
     exception_handler,
     validation_exception_handler,
 )
-
-from app.initializer._settings import settings
 
 
 # 创建 FastAPI 应用实例
