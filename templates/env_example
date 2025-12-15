@@ -11,8 +11,8 @@ APP_DOCS_URL=/docs
 APP_REDOC_URL=/redoc
 
 # ===== 数据库配置 =====
-DB_URL=sqlite:///app.db
-DB_ASYNC_URL=sqlite+aiosqlite:///app.db
+DB_URL=${db_url}
+DB_ASYNC_URL=${db_async_url}
 DB_ECHO=false
 DB_POOL_SIZE=10
 DB_MAX_OVERFLOW=5

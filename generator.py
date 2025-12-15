@@ -172,6 +172,32 @@ class ProjectGenerator:
 
         return directories
 
+    def _get_default_db_urls(self) -> dict[str, str]:
+        """根据 db_type 生成默认的 DB_URL / DB_ASYNC_URL。
+
+        这些值用于生成 .env.example 以及 Settings 的默认值。
+        用户仍可在 .env 中自行修改账号密码/host/库名。
+        """
+
+        db_name = self.project_name.lower().replace("-", "_")
+        if self.db_type == "mysql":
+            return {
+                "db_url": f"mysql+pymysql://user:password@localhost:3306/{db_name}?charset=utf8mb4",
+                "db_async_url": f"mysql+aiomysql://user:password@localhost:3306/{db_name}?charset=utf8mb4",
+            }
+
+        if self.db_type == "postgresql":
+            return {
+                "db_url": f"postgresql://user:password@localhost:5432/{db_name}",
+                "db_async_url": f"postgresql+asyncpg://user:password@localhost:5432/{db_name}",
+            }
+
+        # sqlite (default)
+        return {
+            "db_url": "sqlite:///app.db",
+            "db_async_url": "sqlite+aiosqlite:///app.db",
+        }
+
     def _get_template_target_path(self, template_name: str, context: dict[str, Any]) -> Path | None:
         """
         根据模板映射规则获取目标文件路径
@@ -381,6 +407,7 @@ class ProjectGenerator:
             "db_type": self.db_type,
             "enable_redis": self.enable_redis,
         }
+        context.update(self._get_default_db_urls())
 
         files = [
             "pydantic_settings_config.py",
@@ -598,7 +625,9 @@ class ProjectGenerator:
         context = {
             "project_name": self.project_name,
             "enable_redis": self.enable_redis,
+            "db_type": self.db_type,
         }
+        context.update(self._get_default_db_urls())
 
         try:
             # 统一路由接口
@@ -721,7 +750,7 @@ class ProjectGenerator:
         # .env.example
         try:
             self._validate_template_exists("env_example")
-            content = self._render_template("env_example", {})
+            content = self._render_template("env_example", self._get_default_db_urls())
             (self.project_path / ".env.example").write_text(content, encoding=DEFAULT_ENCODING)
         except Exception as e:
             raise RuntimeError(f"生成 .env.example 失败: {e}") from e

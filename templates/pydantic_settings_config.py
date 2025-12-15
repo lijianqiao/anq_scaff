@@ -32,8 +32,8 @@ class Settings(BaseSettings):
     app_redoc_url: str = Field(default="/redoc", description="ReDoc路径")
 
     # ===== 数据库配置 =====
-    db_url: str = Field(default="sqlite:///app.db", description="数据库URL（同步）")
-    db_async_url: str = Field(default="sqlite+aiosqlite:///app.db", description="数据库URL（异步）")
+    db_url: str = Field(default="${db_url}", description="数据库URL（同步）")
+    db_async_url: str = Field(default="${db_async_url}", description="数据库URL（异步）")
     db_echo: bool = Field(default=False, description="SQL日志")
     db_pool_size: int = Field(default=10, description="连接池大小")
     db_max_overflow: int = Field(default=5, description="最大溢出连接数")
