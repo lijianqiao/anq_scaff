@@ -33,18 +33,15 @@ def test_health(test_client: TestClient) -> None:
 
 def test_auth_without_token(test_client: TestClient) -> None:
     """测试无 Token 访问（可选认证）"""
-    response = test_client.post(
-        "/api/v1/user/actions",
-        json={"action": "list", "params": {"page": 1, "size": 10}},
-    )
+    response = test_client.get("/api/v1/user", params={"page": 1, "size": 10})
     assert response.status_code in (401, 403)
 
 
 def test_auth_with_invalid_token(test_client: TestClient) -> None:
     """测试无效 Token"""
-    response = test_client.post(
-        "/api/v1/user/actions",
-        json={"action": "list", "params": {}},
+    response = test_client.get(
+        "/api/v1/user",
+        params={"page": 1, "size": 10},
         headers={"Authorization": "Bearer invalid_token"},
     )
     assert response.status_code in (401, 403)
@@ -55,9 +52,9 @@ def test_auth_with_valid_token(
     auth_headers: dict[str, str],
 ) -> None:
     """测试有效 Token"""
-    response = test_client.post(
-        "/api/v1/user/actions",
-        json={"action": "list", "params": {"page": 1, "size": 10}},
+    response = test_client.get(
+        "/api/v1/user",
+        params={"page": 1, "size": 10},
         headers=auth_headers,
     )
     assert response.status_code == 200
@@ -71,7 +68,7 @@ def test_auth_with_valid_token(
 def test_validation_error(test_client: TestClient) -> None:
     """测试参数验证失败 - 发送无效JSON"""
     response = test_client.post(
-        "/api/v1/user/actions",
+        "/api/v1/user",
         content="invalid json",  # 发送非JSON内容
         headers={"Content-Type": "application/json"},
     )
@@ -86,17 +83,17 @@ def test_not_found(test_client: TestClient) -> None:
     assert response.status_code == 404
 
 
-# ==================== 统一动作接口测试 ====================
+# ==================== RESTful 接口测试 ====================
 
 
-def test_unified_action_list(
+def test_rest_list(
     test_client: TestClient,
     auth_headers: dict[str, str],
 ) -> None:
-    """测试统一动作接口 - list"""
-    response = test_client.post(
-        "/api/v1/user/actions",  # 注意：v1 版本 API
-        json={"action": "list", "params": {"page": 1, "size": 10}},
+    """测试 RESTful 接口 - list"""
+    response = test_client.get(
+        "/api/v1/user",
+        params={"page": 1, "size": 10},
         headers=auth_headers,
     )
     assert response.status_code == 200
@@ -105,14 +102,13 @@ def test_unified_action_list(
     assert data["code"] in [0, 2001, 4001]
 
 
-def test_unified_action_get(
+def test_rest_get(
     test_client: TestClient,
     auth_headers: dict[str, str],
 ) -> None:
-    """测试统一动作接口 - get"""
-    response = test_client.post(
-        "/api/v1/user/actions",  # 注意：v1 版本 API
-        json={"action": "get", "params": {"id": "test_id"}},
+    """测试 RESTful 接口 - get"""
+    response = test_client.get(
+        "/api/v1/user/test_id",
         headers=auth_headers,
     )
     assert response.status_code == 200
@@ -121,17 +117,14 @@ def test_unified_action_get(
     assert data["code"] in [0, 2001, 4001]
 
 
-def test_unified_action_create(
+def test_rest_create(
     test_client: TestClient,
     auth_headers: dict[str, str],
 ) -> None:
-    """测试统一动作接口 - create"""
+    """测试 RESTful 接口 - create"""
     response = test_client.post(
-        "/api/v1/user/actions",  # 注意：v1 版本 API
-        json={
-            "action": "create",
-            "params": {"name": "test_user", "description": "test description"},
-        },
+        "/api/v1/user",
+        json={"name": "test_user", "description": "test description"},
         headers=auth_headers,
     )
     assert response.status_code == 200
@@ -140,20 +133,18 @@ def test_unified_action_create(
     assert data["code"] in [0, 2001, 4002]
 
 
-def test_unified_action_invalid(
+def test_rest_delete(
     test_client: TestClient,
     auth_headers: dict[str, str],
 ) -> None:
-    """测试统一动作接口 - 无效动作"""
-    response = test_client.post(
-        "/api/v1/user/actions",
-        json={"action": "invalid_action", "params": {}},
+    """测试 RESTful 接口 - delete"""
+    response = test_client.delete(
+        "/api/v1/user/test_id",
         headers=auth_headers,
     )
     assert response.status_code == 200
     data: dict[str, Any] = response.json()
-    # 应该返回参数错误
-    assert data["code"] != 0
+    assert data["code"] in [0, 4001]
 
 
 # ==================== 数据库操作测试 ====================

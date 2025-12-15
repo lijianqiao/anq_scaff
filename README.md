@@ -13,7 +13,7 @@ ANQ Scaff 是一个企业级 FastAPI 项目脚手架生成工具，集成了现�
 - ✅ 保证高性能和优秀的开发体验
 
 ### 2. 统一的路由接口
-- ✅ 所有 CRUD 操作均遵循 **POST /<资源>/actions** 模式
+- ✅ 所有 CRUD 操作均遵循 RESTful 风格接口
 - ✅ 接口规范高度统一，便于客户端调用
 
 ### 3. 分层的异常处理
@@ -218,47 +218,6 @@ myproject/
 ```
 
 ## 💡 使用示例
-
-### 统一路由接口
-
-所有CRUD操作通过统一接口：
-
-```bash
-# 列表
-POST /user/actions
-{
-  "action": "list",
-  "params": {"page": 1, "size": 10}
-}
-
-# 详情
-POST /user/actions
-{
-  "action": "get",
-  "params": {"id": "123"}
-}
-
-# 创建
-POST /user/actions
-{
-  "action": "create",
-  "params": {"name": "test", "phone": "13800138000"}
-}
-
-# 更新
-POST /user/actions
-{
-  "action": "update",
-  "params": {"id": "123", "name": "new_name"}
-}
-
-# 删除
-POST /user/actions
-{
-  "action": "delete",
-  "params": {"id": "123"}
-}
-```
 
 ### 使用LoggingFastCRUD
 

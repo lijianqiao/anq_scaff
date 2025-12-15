@@ -1,28 +1,31 @@
-"""
-统一路由接口 - POST /<资源>/actions 模式
+"""统一路由接口 - RESTful 模式
+
+提供一组通用 RESTful 入口（可选启用，受白名单控制）：
+- GET    /<resource>
+- GET    /<resource>/{id}
+- POST   /<resource>
+- PATCH  /<resource>/{id}
+- DELETE /<resource>/{id}
+
+说明：
+- 该路由通过资源名动态导入 service/schema 做分发。
+- 若项目已为资源生成了显式模块路由（app.api.v1.<resource>），优先使用显式路由。
 """
 
-# 导入引发的报错在创建项目之后会自动消失
+import importlib
 import re
 from typing import Any
 
 from fastapi import APIRouter, Body, Depends, HTTPException
 from fastapi import status as http_status
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import ValidationError
 
 from app.api.dependencies import JWTUser, get_current_user_required
 from app.api.exceptions import BaseAppError
 from app.api.responses import Responses
 from app.api.status import Status
 from app.initializer._settings import settings
-
-
-class ActionRequest(BaseModel):
-    """统一动作请求模型"""
-
-    action: str  # 动作名称：list, get, create, update, delete
-    params: dict[str, Any] = {}  # 动作参数
 
 
 router = APIRouter()
@@ -33,9 +36,6 @@ router = APIRouter()
 ALLOWED_RESOURCES: set[str] = set(settings.api_allowed_resources)
 ALLOW_ALL: bool = settings.unified_route_allow_all
 REQUIRE_AUTH: bool = True  # 始终强制认证
-
-# 允许的动作白名单
-ALLOWED_ACTIONS: set[str] = {"list", "get", "create", "update", "delete"}
 
 # 资源名称正则验证（只允许小写字母、数字和下划线）
 RESOURCE_NAME_PATTERN = re.compile(r"^[a-z][a-z0-9_]*$")
@@ -62,21 +62,36 @@ def _validate_resource(resource: str) -> bool:
     return True
 
 
-@router.post("/{resource}/actions")
-async def unified_action(
-    resource: str,
-    request: ActionRequest = Body(...),
-    current_user: JWTUser | None = Depends(get_current_user_required),
-) -> dict[str, Any]:
-    """
-    统一动作接口 - POST /<资源>/actions
+def _snake_to_pascal(name: str) -> str:
+    return "".join(part[:1].upper() + part[1:] for part in name.split("_") if part)
 
-    所有CRUD操作均通过此接口，遵循统一规范：
-    - action: 动作名称（list, get, create, update, delete）
-    - params: 动作参数
-    """
+
+def _get_service_instance(resource: str) -> Any | None:
+    try:
+        module_name = f"app.services.{resource}"
+        service_module = importlib.import_module(module_name)
+        service_class = getattr(service_module, f"{_snake_to_pascal(resource)}Service", None)
+        if not service_class:
+            return None
+        return service_class()
+    except Exception:
+        return None
+
+
+def _get_schema_types(resource: str) -> tuple[type[Any] | None, type[Any] | None]:
+    try:
+        module_name = f"app.schemas.{resource}"
+        schema_module = importlib.import_module(module_name)
+        pascal = _snake_to_pascal(resource)
+        create_type = getattr(schema_module, f"{pascal}Create", None)
+        update_type = getattr(schema_module, f"{pascal}Update", None)
+        return create_type, update_type
+    except Exception:
+        return None, None
+
+
+def _ensure_allowed(resource: str, current_user: JWTUser | None) -> None:
     if current_user is None:
-        # 双重保护，确保未认证时直接返回 401
         raise HTTPException(
             status_code=http_status.HTTP_401_UNAUTHORIZED,
             detail="未授权访问",
@@ -85,63 +100,134 @@ async def unified_action(
 
     if not ALLOW_ALL and not ALLOWED_RESOURCES:
         logger.warning("统一路由未配置允许的资源，已拒绝请求")
-        return Responses.failure(status=Status.PARAMS_ERROR, msg="统一路由未启用或未配置白名单")
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail="统一路由未启用或未配置白名单",
+        )
 
-    # 验证资源名称（安全检查）
     if not _validate_resource(resource):
         logger.warning(f"非法资源访问尝试: resource={resource}")
-        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"不支持的资源: {resource}")
+        raise HTTPException(
+            status_code=http_status.HTTP_404_NOT_FOUND,
+            detail=f"不支持的资源: {resource}",
+        )
 
-    # 验证动作名称
-    if request.action not in ALLOWED_ACTIONS:
-        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"不支持的动作: {request.action}")
 
+@router.get("/{resource}")
+async def list_resource(
+    resource: str,
+    page: int = 1,
+    size: int = 10,
+    current_user: JWTUser | None = Depends(get_current_user_required),
+) -> dict[str, Any]:
+    _ensure_allowed(resource, current_user)
+    service = _get_service_instance(resource)
+    if not service or not hasattr(service, "list"):
+        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"资源 '{resource}' 不支持 list")
     try:
-        # 根据资源名称和动作分发到对应的服务
-        handler = _get_action_handler(resource, request.action)
-        if not handler:
-            return Responses.failure(
-                status=Status.PARAMS_ERROR,
-                msg=f"资源 '{resource}' 不支持动作 '{request.action}'",
-            )
-
-        # 执行动作
-        result = await handler(request.params, current_user)
-        return Responses.success(data=result)
-
+        items, total = await service.list(page=page, size=size)
+        return Responses.success(data={"items": items, "total": total})
     except BaseAppError as e:
-        # 业务异常，返回具体错误码和消息
-        logger.warning(f"业务异常: resource={resource}, action={request.action}, error={e.msg}")
         return Responses.failure(status=e.status, msg=e.msg, data=e.data)
-
     except Exception:
-        # 未知异常，记录详细日志
-        logger.exception(f"统一动作接口执行失败: resource={resource}, action={request.action}")
+        logger.exception(f"统一RESTful接口执行失败: resource={resource}, action=list")
         return Responses.failure(msg="系统错误，请稍后重试")
 
 
-def _get_action_handler(resource: str, action: str) -> Any:
-    """
-    获取动作处理器
-
-    Args:
-        resource: 资源名称（已通过验证）
-        action: 动作名称
-
-    Returns:
-        处理器方法，如果不存在返回 None
-    """
+@router.get("/{resource}/{id}")
+async def get_resource(
+    resource: str,
+    id: str,
+    current_user: JWTUser | None = Depends(get_current_user_required),
+) -> dict[str, Any]:
+    _ensure_allowed(resource, current_user)
+    service = _get_service_instance(resource)
+    if not service or not hasattr(service, "get"):
+        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"资源 '{resource}' 不支持 get")
     try:
-        module_name = f"app.services.{resource}"
-        service_module = __import__(module_name, fromlist=[f"{resource.capitalize()}Service"])
-        service_class = getattr(service_module, f"{resource.capitalize()}Service", None)
+        data = await service.get(id)
+        if not data:
+            return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
+        return Responses.success(data=data)
+    except BaseAppError as e:
+        return Responses.failure(status=e.status, msg=e.msg, data=e.data)
+    except Exception:
+        logger.exception(f"统一RESTful接口执行失败: resource={resource}, action=get")
+        return Responses.failure(msg="系统错误，请稍后重试")
 
-        if not service_class:
-            return None
 
-        service_instance = service_class()
-        handler_method = getattr(service_instance, action, None)
-        return handler_method
+@router.post("/{resource}")
+async def create_resource(
+    resource: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: JWTUser | None = Depends(get_current_user_required),
+) -> dict[str, Any]:
+    _ensure_allowed(resource, current_user)
+    service = _get_service_instance(resource)
+    if not service or not hasattr(service, "create"):
+        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"资源 '{resource}' 不支持 create")
+    create_type, _ = _get_schema_types(resource)
+    if not create_type:
+        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"资源 '{resource}' 未找到 Create schema")
+    try:
+        create_obj = create_type(**payload)
+        new_id = await service.create(create_obj)
+        return Responses.success(data={"id": new_id})
+    except ValidationError as e:
+        return Responses.failure(status=Status.PARAMS_ERROR, msg="参数验证失败", data={"errors": e.errors()})
+    except BaseAppError as e:
+        return Responses.failure(status=e.status, msg=e.msg, data=e.data)
+    except Exception:
+        logger.exception(f"统一RESTful接口执行失败: resource={resource}, action=create")
+        return Responses.failure(msg="系统错误，请稍后重试")
 
-    except (ImportError, AttributeError):
-        return None
+
+@router.patch("/{resource}/{id}")
+async def update_resource(
+    resource: str,
+    id: str,
+    payload: dict[str, Any] = Body(...),
+    current_user: JWTUser | None = Depends(get_current_user_required),
+) -> dict[str, Any]:
+    _ensure_allowed(resource, current_user)
+    service = _get_service_instance(resource)
+    if not service or not hasattr(service, "update"):
+        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"资源 '{resource}' 不支持 update")
+    _, update_type = _get_schema_types(resource)
+    if not update_type:
+        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"资源 '{resource}' 未找到 Update schema")
+    try:
+        update_obj = update_type(**payload)
+        ok = await service.update(id, update_obj)
+        if not ok:
+            return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
+        return Responses.success(data={"id": id})
+    except ValidationError as e:
+        return Responses.failure(status=Status.PARAMS_ERROR, msg="参数验证失败", data={"errors": e.errors()})
+    except BaseAppError as e:
+        return Responses.failure(status=e.status, msg=e.msg, data=e.data)
+    except Exception:
+        logger.exception(f"统一RESTful接口执行失败: resource={resource}, action=update")
+        return Responses.failure(msg="系统错误，请稍后重试")
+
+
+@router.delete("/{resource}/{id}")
+async def delete_resource(
+    resource: str,
+    id: str,
+    current_user: JWTUser | None = Depends(get_current_user_required),
+) -> dict[str, Any]:
+    _ensure_allowed(resource, current_user)
+    service = _get_service_instance(resource)
+    if not service or not hasattr(service, "delete"):
+        return Responses.failure(status=Status.PARAMS_ERROR, msg=f"资源 '{resource}' 不支持 delete")
+    try:
+        ok = await service.delete(id)
+        if not ok:
+            return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
+        return Responses.success(data={"id": id})
+    except BaseAppError as e:
+        return Responses.failure(status=e.status, msg=e.msg, data=e.data)
+    except Exception:
+        logger.exception(f"统一RESTful接口执行失败: resource={resource}, action=delete")
+        return Responses.failure(msg="系统错误，请稍后重试")

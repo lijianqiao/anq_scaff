@@ -40,6 +40,8 @@ LOG_ENABLE_FILE=true
 
 # ===== JWT 配置 =====
 # 警告：生产环境必须修改此密钥！
+# JWT 密钥 (至少 32 字符，生产环境必须更换！)
+# 可使用命令生成: python -c "import secrets; print(secrets.token_urlsafe(32))"
 JWT_SECRET_KEY=your-secret-key-change-in-production
 JWT_ALGORITHM=HS256
 JWT_EXPIRE_MINUTES=1440
@@ -51,7 +53,7 @@ API_KEY_PREFIX=anq_
 API_KEY_LENGTH=32
 
 # ===== 统一路由安全配置 =====
-API_ALLOWED_RESOURCES=user
+API_ALLOWED_RESOURCES=["user","admin"]
 UNIFIED_ROUTE_ALLOW_ALL=false
 UNIFIED_ROUTE_REQUIRE_AUTH=true
 

@@ -1,12 +1,14 @@
-"""
-API接口 - ${ModuleName}
-统一路由接口：POST /${module_name}/actions
+"""API接口 - ${ModuleName}
+
+RESTful 风格接口：
+- GET    /${module_name}
+- GET    /${module_name}/{id}
+- POST   /${module_name}
+- PATCH  /${module_name}/{id}
+- DELETE /${module_name}/{id}
 """
 
-from typing import Any
-
-from fastapi import APIRouter, Body, Depends, HTTPException
-from fastapi import status as http_status
+from fastapi import APIRouter, Depends
 
 from app.api.dependencies import JWTUser, get_current_user_required
 from app.api.responses import Responses
@@ -14,75 +16,69 @@ from app.api.status import Status
 from app.schemas.${module_name} import ${ModuleName}Create, ${ModuleName}Update
 from app.services.${module_name} import ${ModuleName}Service
 
-router = APIRouter()
+router = APIRouter(prefix="/${module_name}")
 _active = True
 _tag = "${module_name}"
 
 
-@router.post("/${module_name}/actions")
-async def unified_action(
-    request: dict[str, Any] = Body(...),
-    current_user: JWTUser | None = Depends(get_current_user_required),
-) -> dict[str, Any]:
-    """
-    统一动作接口
-    action: list, get, create, update, delete
-    """
-    if current_user is None:
-        raise HTTPException(
-            status_code=http_status.HTTP_401_UNAUTHORIZED,
-            detail="未授权访问",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    action = request.get("action")
-    params = request.get("params", {})
-
+@router.get("")
+async def list_${module_name}(
+    page: int = 1,
+    size: int = 10,
+    current_user: JWTUser = Depends(get_current_user_required),
+) -> dict:
+    _ = current_user
     service = ${ModuleName}Service()
+    items, total = await service.list(page=page, size=size)
+    return Responses.success(data={"items": items, "total": total})
 
-    try:
-        if action == "list":
-            page = params.get("page", 1)
-            size = params.get("size", 10)
-            items, total = await service.list(page=page, size=size)
-            return Responses.success(data={"items": items, "total": total})
 
-        elif action == "get":
-            id = params.get("id")
-            if not id:
-                return Responses.failure(status=Status.PARAMS_ERROR, msg="缺少id参数")
-            data = await service.get(id)
-            if not data:
-                return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
-            return Responses.success(data=data)
+@router.get("/{id}")
+async def get_${module_name}(
+    id: str,
+    current_user: JWTUser = Depends(get_current_user_required),
+) -> dict:
+    _ = current_user
+    service = ${ModuleName}Service()
+    data = await service.get(id)
+    if not data:
+        return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
+    return Responses.success(data=data)
 
-        elif action == "create":
-            create_data = ${ModuleName}Create(**params)
-            id = await service.create(create_data)
-            return Responses.success(data={"id": id})
 
-        elif action == "update":
-            id = params.get("id")
-            if not id:
-                return Responses.failure(status=Status.PARAMS_ERROR, msg="缺少id参数")
-            update_data = ${ModuleName}Update(**params)
-            success = await service.update(id, update_data)
-            if not success:
-                return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
-            return Responses.success(data={"id": id})
+@router.post("")
+async def create_${module_name}(
+    payload: ${ModuleName}Create,
+    current_user: JWTUser = Depends(get_current_user_required),
+) -> dict:
+    _ = current_user
+    service = ${ModuleName}Service()
+    new_id = await service.create(payload)
+    return Responses.success(data={"id": new_id})
 
-        elif action == "delete":
-            id = params.get("id")
-            if not id:
-                return Responses.failure(status=Status.PARAMS_ERROR, msg="缺少id参数")
-            success = await service.delete(id)
-            if not success:
-                return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
-            return Responses.success(data={"id": id})
 
-        else:
-            return Responses.failure(
-                status=Status.PARAMS_ERROR, msg=f"不支持的动作: {action}"
-            )
+@router.patch("/{id}")
+async def update_${module_name}(
+    id: str,
+    payload: ${ModuleName}Update,
+    current_user: JWTUser = Depends(get_current_user_required),
+) -> dict:
+    _ = current_user
+    service = ${ModuleName}Service()
+    ok = await service.update(id, payload)
+    if not ok:
+        return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
+    return Responses.success(data={"id": id})
 
-    except Exception as e:
-        return Responses.failure(msg=f"操作失败: {e!s}", error=str(e))
+
+@router.delete("/{id}")
+async def delete_${module_name}(
+    id: str,
+    current_user: JWTUser = Depends(get_current_user_required),
+) -> dict:
+    _ = current_user
+    service = ${ModuleName}Service()
+    ok = await service.delete(id)
+    if not ok:
+        return Responses.failure(status=Status.RECORD_NOT_EXIST_ERROR)
+    return Responses.success(data={"id": id})

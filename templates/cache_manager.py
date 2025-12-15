@@ -4,7 +4,10 @@
 """
 
 import json
+from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
+from uuid import UUID
 
 from loguru import logger
 
@@ -64,10 +67,20 @@ class CacheManager:
         Returns:
             是否设置成功
         """
+
+        def _json_default(obj: Any) -> Any:
+            if isinstance(obj, (datetime, date)):
+                return obj.isoformat()
+            if isinstance(obj, Decimal):
+                return float(obj)
+            if isinstance(obj, UUID):
+                return str(obj)
+            return str(obj)
+
         if self._use_redis and self.redis_client is not None:
             try:
                 with self.redis_client.connection() as r:
-                    r.setex(key, expire, json.dumps(value, ensure_ascii=False))
+                    r.setex(key, expire, json.dumps(value, ensure_ascii=False, default=_json_default))
                     return True
             except Exception as e:
                 logger.warning(f"Redis设置缓存失败: {e}，回退到内存缓存")
