@@ -14,11 +14,14 @@ from app.middleware.exceptions import (
     validation_exception_handler,
 )
 
+from app.initializer._settings import settings
+
+
 # 创建 FastAPI 应用实例
 app = FastAPI(
-    title="pro",
-    description="企业级 FastAPI 应用",
-    version="1.0.0",
+    title=settings.app_name,
+    description=settings.app_description,
+    version=settings.app_version,
     lifespan=lifespan,
 )
 
