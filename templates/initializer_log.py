@@ -107,10 +107,10 @@ def init_logger(
     if enable_file:
         # 添加信息日志文件处理器（DEBUG 和 INFO）
         logger.add(
-            f"{basedir}/info.log",
+            f"{basedir}/info_{{time:YYYYMMDD}}.log",
             format=file_format,
             level="DEBUG",
-            rotation="100 MB",
+            rotation="00:00",
             retention="30 days",
             compression="zip",
             filter=lambda record: _context_filter(record) and record["level"].no <= 20,  # type: ignore[arg-type]
@@ -119,10 +119,10 @@ def init_logger(
 
         # 添加错误日志文件处理器（WARNING 及以上）
         logger.add(
-            f"{basedir}/error.log",
+            f"{basedir}/error_{{time:YYYYMMDD}}.log",
             format=file_format,
             level="WARNING",
-            rotation="100 MB",
+            rotation="00:00",
             retention="90 days",
             compression="zip",
             filter=_context_filter,  # type: ignore[arg-type]
@@ -131,10 +131,10 @@ def init_logger(
 
         # 添加 API 流量日志文件处理器
         logger.add(
-            f"{basedir}/api_traffic.log",
+            f"{basedir}/api_traffic_{{time:YYYYMMDD}}.log",
             format=api_format,
             level="INFO",
-            rotation="100 MB",
+            rotation="00:00",
             retention="7 days",
             compression="zip",
             filter=lambda record: record["extra"].get("log_type") == "api_traffic",
